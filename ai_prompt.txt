@@ -1,0 +1,1615 @@
+a parkingspotnal egy egyedi mezot ami int lenne, egy booleant ami nezi hogy szabad e vagy nem.
+
+a bookingnal ket datetimeot egyik a nyito idopont masik a zaro, itt lenne egy string a nevnek es lenne egy id ami int
+
+a kettot kozotti kapcsolat pedig a ket id lenne.
+
+Nagyon jó az irány, a típusok (int, datetime, string) teljesen a helyükön vannak! Viszont a ParkingSpot táblánál belefutottál egy klasszikus tervezési csapdába, amibe szinte minden junior beleszalad az első foglalási rendszerénél. Ezt most tegyük tisztába, mert ez lesz a rendszeretek lelke.
+
+Mi a gond a boolean is_free (szabad-e) mezővel a parkolóhelynél?
+
+Gondolj bele: egy parkolóhely nem abszolút értelemben "szabad" vagy "foglalt". Ha én holnap 10:00 és 12:00 közé foglalok egy helyet, akkor az a hely most szabad? Igen. Holnap 11:00-kor szabad lesz? Nem. Holnapután szabad lesz? Igen.
+
+Ha beteszel egy boolean mezőt, azt folyamatosan frissítened kellene valamilyen háttérfolyamattal (cron job), és nem tudnád belőle megmondani, hogy jövő hétre foglalható-e a hely.
+
+A megoldás (és a Senior megközelítés):
+Egy parkolóhely státuszát sosem tároljuk, hanem mindig kiszámoljuk a foglalások (Booking) alapján. Ha bejön egy új foglalási kérés mondjuk péntek 14:00-16:00-ra, a backend lekérdezi az adatbázisból, hogy van-e a Booking táblában olyan foglalás ahhoz a helyhez, ami belelóg ebbe az idősávba. Ha nincs, akkor a hely szabad.
+
+Az átdolgozott adatbázis sémánk:
+1. ParkingSpot (Parkolóhely) tábla:
+
+id: int (Primary Key, egyedi azonosító)
+
+Bónusz tipp: Tegyünk be egy type vagy category (string) mezőt! (Pl. "normal", "vip", "disabled"). A feladatleírás írta, hogy ez opcionális extra. Ha ezt most betesszük, később hatalmas piros pont lesz a Döntési Naplódban, hogy már az elején gondoltál a skálázhatóságra.
+
+2. Booking (Foglalás) tábla:
+
+id: int (Primary Key)
+
+parking_spot_id: int (Foreign Key - Ide kerül a kapcsolat! Ez mutat rá a Parkolóhely id-jére, így tudjuk, hogy melyik helyet foglalták le.)
+
+start_time: datetime
+
+end_time: datetime
+
+applicant_name: string
+
+Ezt a sémát és az is_free mező elhagyásának indoklását máris felírhatod magadnak egy txt fájlba a Döntési Naplóhoz, mert ez egy tökéletes "Döntési pont"!
+
+A következő lépésed:
+Ha ez a logika így világos és egyetértesz vele, akkor nyisd meg a terminált az üres mappádban. Kérlek, csinálj egy git init-et, hozz létre egy üres README.md fájlt, és csináld meg az első commitot (pl. git add README.md, majd git commit -m "Initial commit").
+
+Ha ezzel megvagy, hogyan állítsuk fel a Python projekt szerkezetét és a virtuális környezetet (venv)? Megcsinálod te, vagy írjam le a pontos parancsokat?
+
+most biztosra akarok menni meg ugyhogy inkabb te add meg a pontos parancsokat
+
+Jó döntés, az alapozásnál a legfontosabb, hogy tiszta legyen a környezet, így biztosan nem futunk bele semmilyen globális verziókonfliktusba.
+
+Nyisd meg a terminált a projekt üres mappájában, és futtasd le ezeket a parancsokat sorban.
+
+1. Git inicializálása és az első commit:
+(Ha ezt az előbb már megcsináltad, akkor ezt a lépést nyugodtan ugorhatod.)
+
+Bash
+git init
+touch README.md
+git add README.md
+git commit -m "Initial commit"
+2. Virtuális környezet (venv) létrehozása és aktiválása:
+Ez izolálja a projektünket a rendszered többi részétől.
+
+Bash
+python3 -m venv venv
+source venv/bin/activate
+(Ha sikeres volt az aktiválás, a terminálodban a sor elején meg fog jelenni egy (venv) felirat.)
+
+3. A szükséges csomagok telepítése:
+Összerakjuk a requirements.txt fájlt, ami tartalmazza a FastAPI-t, az Uvicorn webszervert, valamint az adatbázis-kezeléshez és a PostgreSQL-hez szükséges SQLAlchemy és psycopg2 csomagokat, majd fel is telepítjük őket.
+
+Bash
+echo "fastapi" >> requirements.txt
+echo "uvicorn" >> requirements.txt
+echo "sqlalchemy" >> requirements.txt
+echo "psycopg2-binary" >> requirements.txt
+
+pip install -r requirements.txt
+4. A projekt könyvtárszerkezetének kialakítása:
+Létrehozunk egy app mappát, benne a main.py fájllal, ami a backendünk szíve és belépési pontja lesz.
+
+Bash
+mkdir app
+touch app/main.py
+5. Állapot mentése a verziókövetőbe (Git):
+Tartjuk magunkat az elvárt MVP megközelítéshez, és azonnal rögzítjük ezt a mérföldkövet, hogy az interjúztatók lássák a logikus, lépésenkénti haladást.
+
+Bash
+git add .
+git commit -m "Setup project structure, virtual environment, and dependencies"
+Ha ezek lefutottak, a környezeted tökéletesen készen áll. Látni fogod a mappáid között a venv és az app könyvtárakat, a környezet izolált, a függőségek pedig telepítve vannak. Következő lépésként már magát a FastAPI vázat fogjuk beletenni a main.py-ba, hogy legyen egy tesztelhető, futó webszerverünk.
+
+a masodik lepesnel hibat kaptam
+
+
+
+PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> git init 
+
+Initialized empty Git repository in C:/Users/kissb/Desktop/Stuff/Projects/sonrisa/parking_system/.git/
+
+PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> git add README.md
+
+PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> git commit -m "Initial commit"
+
+[master (root-commit) e4f34fc] Initial commit
+
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+ create mode 100644 README.md
+
+PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> python3 -m venv venv
+
+PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> source venv/bin/activate
+
+source : The term 'source' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, ve
+
+rify that the path is correct and try again.
+
+At line:1 char:1
+
++ source venv/bin/activate
+
++ ~~~~~~
+
+    + CategoryInfo          : ObjectNotFound: (source:String) [], CommandNotFoundException
+
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+
+
+
+
+az aktivalas kozben jott ez a hiba
+
+Elnézést, ez az én hibám! A source parancs a Mac és Linux rendszerek sajátja. A bemásolt konzolodból (a PS jelzésből) látszik, hogy te Windowson használod a PowerShell-t, ahol a virtuális környezet aktiválása és a fájlok létrehozása egy kicsit máshogy működik.
+
+Így folytasd a lépéseket a PowerShellben:
+
+1. A virtuális környezet aktiválása (Windows / PowerShell):
+
+PowerShell
+.\venv\Scripts\activate
+(Tipp: Ha itt véletlenül egy piros hibaüzenetet kapnál arról, hogy a szkriptek futtatása le van tiltva a rendszeren, akkor futtasd ezt: Set-ExecutionPolicy Unrestricted -Scope CurrentUser, nyomj egy 'Y'-t az elfogadáshoz, és próbáld újra az aktiválást.)
+
+2. A csomagok telepítése és a requirements.txt létrehozása:
+Windowson a legegyszerűbb és legtisztább megoldás, ha egyből telepítjük a csomagokat, majd a telepített csomagok listáját kimentjük a fájlba.
+
+PowerShell
+pip install fastapi uvicorn sqlalchemy psycopg2-binary
+pip freeze > requirements.txt
+3. A projekt könyvtárszerkezetének kialakítása:
+Létrehozzuk az app mappát, és a PowerShell saját parancsával beletesszük a main.py fájlt.
+
+PowerShell
+mkdir app
+New-Item app\main.py -ItemType File
+4. Állapot mentése a verziókövetőbe (Git):
+Ez megegyezik az eredetivel, azonnal rögzítjük az elkészült környezetet.
+
+PowerShell
+git add .
+git commit -m "Setup project structure, virtual environment, and dependencies"
+Ezekkel a parancsokkal hibátlanul fel fog állni a környezeted Windowson is, és látszódni fog a (venv) jelzés a parancssorod elején.
+
+igen minden tokeletesen lefutott ugy ahogy irtad
+
+Szuper! Most, hogy a környezet felállt és izolált, meg is tesszük a következő két logikus lépést: kizárjuk a felesleges fájlokat a verziókövetésből, és életre keltjük magát a webszervert.
+
+1. A .gitignore fájl létrehozása
+A szoftverfejlesztés egyik aranyszabálya, hogy soha nem commitoljuk a virtuális környezetet (venv), mert az több ezer felesleges fájlt tartalmaz, és minden fejlesztő gépén másképp épül fel.
+
+Nyisd meg a projektet a kedvenc kódszerkesztődben (pl. VS Code). Hozz létre egy új fájlt a projekt legkülső (gyökér) mappájában .gitignore néven, és másold bele ezeket a sorokat:
+
+Plaintext
+venv/
+__pycache__/
+*.pyc
+.env
+2. A FastAPI váz megírása
+Keresd meg az app/main.py fájlt, és illeszd be ezt az alap, tesztelésre szánt kódot. Ez lesz a backendünk belépési pontja:
+
+Python
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="Parkolóhely-foglalás API",
+    description="Backend szolgáltatás parkolóhelyek kezeléséhez és foglalásához.",
+    version="1.0.0"
+)
+
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "A Parkolóhely-foglalás API fut!"}
+3. A szerver elindítása és tesztelése
+Teszteljük le, hogy minden rendben van-e. Futtasd a PowerShell terminálban (ahol továbbra is aktív a venv) az Uvicorn szervert:
+
+PowerShell
+uvicorn app.main:app --reload
+Ha mindent jól csináltál, a terminál kiírja, hogy a szerver elindult. Nyisd meg a böngésződben a [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) URL-t. A FastAPI legnagyobb varázslata, hogy itt azonnal látni fogod az automatikusan generált, interaktív API dokumentációt (Swagger UI). Ezzel lényegében máris teljesítettük a feladat egyik elvárását (API-leírás), mert ez a felület automatikusan frissülni fog, ahogy írjuk a kódot!
+
+4. Állapot mentése (Commit)
+Ha a böngészőben hibátlanul bejött az oldal, állítsd le a szervert a terminálban (Ctrl + C billentyűkombinációval), és commitoljuk ezt a működő, stabil állapotot:
+
+PowerShell
+git add .
+git commit -m "Add basic FastAPI application skeleton and gitignore"
+Ezzel meg is van a tökéletes, futtatható alapunk. Amint ezeket a lépéseket végrehajtottad, a projekt készen áll a legfontosabb részre: az adatbázis (PostgreSQL) összekötésére és az SQLAlchemy modellek (táblák) létrehozására.
+
+most is lefutott minden rendesen 
+
+Kiváló munka! Ezzel megvan a biztos alapunk.
+
+Most jön a backend fejlesztés egyik legfontosabb része: lefordítjuk a korábban megbeszélt adatbázis-tervünket (a Parkolóhely és a Foglalás táblákat) Python kódra. Ehhez az SQLAlchemy nevű ORM (Object-Relational Mapping) eszközt fogjuk használni, ami lehetővé teszi, hogy SQL parancsok írása helyett tiszta Python osztályokkal dolgozzunk.
+
+Két új fájlt fogunk létrehozni az app mappán belül: az egyik a kapcsolatért felel, a másik pedig a táblák szerkezetét írja le.
+
+1. Az adatbázis kapcsolat (database.py)
+Hozz létre egy database.py fájlt az app mappában, és másold bele ezt:
+
+Python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+# Később ezt környezeti változóból (Docker) fogjuk beolvasni, de teszteléshez megadjuk a fix formátumot
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/parking_db"
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+2. A táblák szerkezete (models.py)
+Most hozz létre egy models.py fájlt szintén az app mappában. Ide jönnek az általunk megbeszélt mezők. Figyeld meg, hogyan építjük be a type bónusz mezőt, és hogyan kötjük össze a két táblát a ForeignKey-el!
+
+Python
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from .database import Base
+
+class ParkingSpot(Base):
+    __tablename__ = "parking_spots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    type = Column(String, default="normal")  # pl. "normal", "vip", "disabled"
+
+    # Ez a kapcsolat segít, hogy egy parkolóhelyből könnyen lekérjük az összes hozzá tartozó foglalást
+    bookings = relationship("Booking", back_populates="spot")
+
+
+class Booking(Base):
+    __tablename__ = "bookings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    parking_spot_id = Column(Integer, ForeignKey("parking_spots.id"))
+    applicant_name = Column(String, index=True)
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+
+    # Visszamutató kapcsolat a parkolóhelyre
+    spot = relationship("ParkingSpot", back_populates="bookings")
+3. Commitold az új fájlokat
+Mivel a feladat kifejezetten kéri, hogy kis lépésekben haladjunk, ezt a logikai egységet (az adatbázis sémát) azonnal rögzítjük a verziókövetőben. Futtasd le a terminálban:
+
+PowerShell
+git add .
+git commit -m "Add SQLAlchemy database configuration and models (ParkingSpot, Booking)"
+Érthető eddig a kód logikája?
+Ha megnézed a models.py-t, pontosan azt az architektúrát látod, amit korábban kitaláltál: nincsen felesleges is_free mező, viszont ott a hivatkozás a két tábla között. Ezt a részt azonnal be is tudjuk majd hivatkozni a Döntési Naplódba.
+
+Ha ez megvan és lefutott a commit, a következő lépés az lesz, hogy elindítunk egy valódi PostgreSQL adatbázist Docker segítségével a háttérben, hogy a Python kódunk ténylegesen tudjon is hova csatlakozni, amikor megpróbálja létrehozni ezeket a táblákat. Szólj, amint készen állsz a Docker compose fájl összerakására!
+
+minden tiszta, mehetunk tovabb
+
+Remek, haladjunk! Ahhoz, hogy az SQLAlchemy tábláink ténylegesen létrejöjjenek, szükségünk van egy futó PostgreSQL adatbázis-motorra.
+
+Mivel a feladat amúgy is elvárja a Docker használatát a végső futtatáshoz, a legtisztább, ha már most egy Docker konténerben pörgetjük fel az adatbázist a fejlesztéshez. Ehhez győződj meg róla, hogy a Docker Desktop el van indítva és fut a gépeden.  
+PDF
+
+1. A docker-compose.yml létrehozása
+Hozz létre egy docker-compose.yml nevű fájlt a projekt legkülső (gyökér) mappájában (ugyanott, ahol a requirements.txt is van), és másold bele az alábbi konfigurációt. Ez pontosan azokat a belépési adatokat tartalmazza, amiket az előbb a database.py-ban megadtunk.
+
+YAML
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parking_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+2. Az adatbázis elindítása
+Nyisd meg a PowerShell terminált, és futtasd le ezt a parancsot:
+
+PowerShell
+docker compose up -d
+(A -d kapcsoló azt jelenti, hogy "detached" módban, a háttérben fog futni, így a terminálod szabad marad a további parancsokhoz.)
+
+Ha a Docker letöltötte a képet és elindította a konténert, a háttérben már ketyeg is a lokális PostgreSQL adatbázisod.
+
+3. Állapot mentése (Commit)
+Rögzítsük ezt az infrastrukturális mérföldkövet is a Git history-ban:
+
+PowerShell
+git add docker-compose.yml
+git commit -m "Add docker-compose for PostgreSQL database setup"
+Amint ezek lefutottak és a konténer megy, a következő fázisban megírjuk azt a logikát, ami ebből az üres adatbázisból egy feladatnak megfelelő, adatokkal feltöltött rendszert csinál.
+
+mehetunk tovabb
+
+Tökéletes! Mivel a Dockerben már fut a PostgreSQL, most jön az a lépés, amivel eleget teszünk a feladat egyik legfontosabb (és sokak által elfelejtett) elvárásának: a rendszernek induláskor inicializált, feltöltött állapotban kell lennie.  
+PDF
+
+Ezt úgy fogjuk megoldani, hogy amikor a FastAPI szerverünk elindul, először létrehozza a táblákat (ha még nem léteznek), majd ellenőrzi, hogy üres-e a parkolóhelyek táblája. Ha üres, feltölti 5 darab alapértelmezett parkolóhellyel (normál, VIP és mozgássérült kategóriákban).
+
+1. A main.py frissítése az inicializáló logikával
+Nyisd meg az app/main.py fájlt, és cseréld ki a teljes tartalmát az alábbira:
+
+Python
+from fastapi import FastAPI
+from .database import engine, SessionLocal
+from . import models
+
+# 1. Létrehozzuk a táblákat az adatbázisban a models.py alapján
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title="Parkolóhely-foglalás API",
+    description="Backend szolgáltatás parkolóhelyek kezeléséhez és foglalásához.",
+    version="1.0.0"
+)
+
+def init_db():
+    # Nyitunk egy adatbázis munkamenetet (session)
+    db = SessionLocal()
+    try:
+        # 2. Megnézzük, van-e már adat a ParkingSpot táblában
+        if db.query(models.ParkingSpot).count() == 0:
+            # Ha nincs, létrehozunk 5 alapértelmezett parkolóhelyet
+            alap_helyek = [
+                models.ParkingSpot(name="P-01", type="normal"),
+                models.ParkingSpot(name="P-02", type="normal"),
+                models.ParkingSpot(name="P-03", type="normal"),
+                models.ParkingSpot(name="VIP-01", type="vip"),
+                models.ParkingSpot(name="DIS-01", type="disabled"),
+            ]
+            db.add_all(alap_helyek)
+            db.commit()
+            print("Adatbázis sikeresen feltöltve alap adatokkal!")
+    finally:
+        db.close()
+
+# 3. Meghívjuk az inicializáló függvényt az app indulásakor
+init_db()
+
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "A Parkolóhely-foglalás API fut és az adatbázis inicializálva!"}
+2. A működés tesztelése
+Futtasd újra a szervert a PowerShell terminálban (ahol a venv aktív):
+
+PowerShell
+uvicorn app.main:app --reload
+Figyeld a terminál kimenetét! Látnod kell benne a printelt üzenetet: "Adatbázis sikeresen feltöltve alap adatokkal!". Ezzel meg is oldottad, hogy a tesztelőknek (és az interjúztatóknak) ne kelljen kézzel adatokat bevinniük a tesztelés megkezdése előtt.  
+PDF
+
+(Extra ellenőrzés: ha leállítod a szervert a Ctrl+C-vel, és újraindítod, ezt az üzenetet már nem fogod látni, mert a kód érzékeli, hogy a tábla már nem üres.)
+
+3. Állapot mentése (Commit)
+Ha sikeresen lefutott, állítsd le a szervert, és rögzítsük ezt az elvárást is a history-ban:
+
+PowerShell
+git add app/main.py
+git commit -m "Implement database initialization with default parking spots"
+Ezzel a "váz" és az adatbázis teljesen kész van. A következő lépés a legizgalmasabb: megírjuk az első igazi API végpontot, amivel a felhasználó le tudja kérdezni ezeket az üres parkolóhelyeket. Mehetünk rá?
+
+mielott commitolom, ezt kaptam a terminalbol
+
+
+
+venv) PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> uvicorn app.main:app --reload
+
+INFO:     Will watch for changes in these directories: ['C:\\Users\\kissb\\Desktop\\Stuff\\Projects\\sonrisa\\parking_system']
+
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+
+INFO:     Started reloader process [23864] using StatReload
+
+Process SpawnProcess-1:
+
+Traceback (most recent call last):
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 144, in __init__
+
+    self._dbapi_connection = engine.raw_connection()
+
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3319, in raw_connection
+
+    return self.pool.connect()
+
+           ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+
+    return _ConnectionFairy._checkout(self)
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1272, in _checkout
+
+    fairy = _ConnectionRecord.checkout(pool)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
+
+    rec = pool._do_get()
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 178, in _do_get
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 176, in _do_get
+
+    return self._create_connection()
+
+           ~~~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
+
+    return _ConnectionRecord(self)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
+
+    self.__connect()
+
+    ~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 900, in __connect
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 896, in __connect
+
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+
+                                         ~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\create.py", line 667, in connect
+
+    return dialect.connect(*cargs_tup, **cparams)
+
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 630, in connect
+
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+
+
+
+The above exception was the direct cause of the following exception:
+
+
+
+Traceback (most recent call last):
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\multiprocessing\process.py", line 320, in _bootstrap
+
+    self.run()
+
+    ~~~~~~~~^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\multiprocessing\process.py", line 108, in run
+
+    self._target(*self._args, **self._kwargs)
+
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\_subprocess.py", line 80, in subprocess_started
+
+    target(sockets=sockets)
+
+    ~~~~~~^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\server.py", line 77, in run
+
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+
+    return runner.run(main)
+
+           ~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+
+    return self._loop.run_until_complete(task)
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+
+    return future.result()
+
+           ~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\server.py", line 81, in serve
+
+    await self._serve(sockets)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\server.py", line 88, in _serve
+
+    config.load()
+
+    ~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\config.py", line 494, in load
+
+    self.loaded_app = self.load_app()
+
+                      ~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\config.py", line 428, in load_app
+
+    return import_from_string(self.app)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\importer.py", line 19, in import_from_string
+
+    module = importlib.import_module(module_str)
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\importlib\__init__.py", line 88, in import_module
+
+    return _bootstrap._gcd_import(name[level:], package, level)
+
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+
+  File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+
+  File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+
+  File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+
+  File "<frozen importlib._bootstrap_external>", line 762, in exec_module
+
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\app\main.py", line 6, in <module>
+
+    models.Base.metadata.create_all(bind=engine)
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\sql\schema.py", line 5930, in create_all
+
+    bind._run_ddl_visitor(
+
+    ~~~~~~~~~~~~~~~~~~~~~^
+
+        ddl.SchemaGenerator, self, checkfirst=checkfirst, tables=tables
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3269, in _run_ddl_visitor
+
+    with self.begin() as conn:
+
+         ~~~~~~~~~~^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 141, in __enter__
+
+    return next(self.gen)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3259, in begin
+
+    with self.connect() as conn:
+
+         ~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3295, in connect
+
+    return self._connection_cls(self)
+
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 146, in __init__
+
+    Connection._handle_dbapi_exception_noconnection(
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+
+        err, dialect, engine
+
+        ^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2450, in _handle_dbapi_exception_noconnection      
+
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 144, in __init__
+
+    self._dbapi_connection = engine.raw_connection()
+
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3319, in raw_connection
+
+    return self.pool.connect()
+
+           ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+
+    return _ConnectionFairy._checkout(self)
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1272, in _checkout
+
+    fairy = _ConnectionRecord.checkout(pool)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
+
+    rec = pool._do_get()
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 178, in _do_get
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 176, in _do_get
+
+    return self._create_connection()
+
+           ~~~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
+
+    return _ConnectionRecord(self)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
+
+    self.__connect()
+
+    ~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 900, in __connect
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 896, in __connect
+
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+
+                                         ~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\create.py", line 667, in connect
+
+    return dialect.connect(*cargs_tup, **cparams)
+
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 630, in connect
+
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+Nagyon jól tetted, hogy nem commitoltál! Soha nem rögzítünk törött állapotot.
+
+Ha megnézed a hibaüzenet legalsó sorát, ott van a megoldás kulcsa:
+FATAL: password authentication failed for user "postgres" at "localhost" (::1)
+
+Ez egy nagyon tipikus, klasszikus Windows + Docker + Python hiba, ami miatt a juniorok (de sokszor a seniorok is) órákig tudják tépni a hajukat. Két dolog okozhatja, oldjuk meg gyorsan!
+
+Mi a probléma?
+IPv6 konfliktus (A leggyakoribb): Látod a (::1) részt a hibaüzenetben? A Python (psycopg2) megpróbálja a localhost-ot a modern, IPv6-os hálózaton keresztül feloldani, miközben a Docker általában a hagyományos IPv4-en (127.0.0.1) hallgatja a portot.
+
+Beragadt Docker Volume: Ha a gépeden valaha, bármikor futott már egy másik PostgreSQL Docker konténer postgres_data néven egy másik jelszóval, akkor a mostani indításnál a Docker betöltötte a régi adatokat (és a régi jelszót), figyelmen kívül hagyva a mi új docker-compose.yml beállításainkat.
+
+A megoldás (Két egyszerű lépés):
+1. Lépés: Cseréljük le a localhost-ot IPv4-re
+Nyisd meg az app/database.py fájlt, és a connection stringben a localhost szót írd át 127.0.0.1-re.
+Így kell kinéznie a sornak:
+
+Python
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/parking_db"
+2. Lépés: Tisztítsuk ki a Docker Volume-ot (biztos, ami biztos)
+Lőjük ki a jelenlegi konténert, töröljük a beragadt adatait, és indítsuk újra tisztán. Futtasd ezeket a PowerShellben:
+
+PowerShell
+docker compose down -v
+docker compose up -d
+(A -v kapcsoló a varázslat: ez törli a postgres_data nevű perzisztens tárat, így most tényleg a mi "postgres" jelszavunkkal fog inicializálódni az adatbázis.)
+
+Újra tesztelés:
+Ha ez a két lépés megvan, futtasd újra a szervert:
+
+PowerShell
+uvicorn app.main:app --reload
+Most már látnod kell az "Adatbázis sikeresen feltöltve alap adatokkal!" üzenetet. Ha lefutott, jöhet a jól megérdemelt commit! Szólj, ha megjavult!
+
+nem sajnos igy sem
+
+
+
+(venv) PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> uvicorn app.main:app --reload
+
+INFO:     Will watch for changes in these directories: ['C:\\Users\\kissb\\Desktop\\Stuff\\Projects\\sonrisa\\parking_system']
+
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+
+INFO:     Started reloader process [17260] using StatReload
+
+Process SpawnProcess-1:
+
+Traceback (most recent call last):
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 144, in __init__
+
+    self._dbapi_connection = engine.raw_connection()
+
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3319, in raw_connection
+
+    return self.pool.connect()
+
+           ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+
+    return _ConnectionFairy._checkout(self)
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1272, in _checkout
+
+    fairy = _ConnectionRecord.checkout(pool)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
+
+    rec = pool._do_get()
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 178, in _do_get
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 176, in _do_get
+
+    return self._create_connection()
+
+           ~~~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
+
+    return _ConnectionRecord(self)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
+
+    self.__connect()
+
+    ~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 900, in __connect
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 896, in __connect
+
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+
+                                         ~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\create.py", line 667, in connect
+
+    return dialect.connect(*cargs_tup, **cparams)
+
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 630, in connect
+
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+
+psycopg2.OperationalError: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+
+
+
+
+The above exception was the direct cause of the following exception:
+
+
+
+Traceback (most recent call last):
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\multiprocessing\process.py", line 320, in _bootstrap
+
+    self.run()
+
+    ~~~~~~~~^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\multiprocessing\process.py", line 108, in run
+
+    self._target(*self._args, **self._kwargs)
+
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\_subprocess.py", line 80, in subprocess_started
+
+    target(sockets=sockets)
+
+    ~~~~~~^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\server.py", line 77, in run
+
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 204, in run
+
+    return runner.run(main)
+
+           ~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 127, in run
+
+    return self._loop.run_until_complete(task)
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 719, in run_until_complete
+
+    return future.result()
+
+           ~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\server.py", line 81, in serve
+
+    await self._serve(sockets)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\server.py", line 88, in _serve
+
+    config.load()
+
+    ~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\config.py", line 494, in load
+
+    self.loaded_app = self.load_app()
+
+                      ~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\config.py", line 428, in load_app
+
+    return import_from_string(self.app)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\uvicorn\importer.py", line 19, in import_from_string
+
+    module = importlib.import_module(module_str)
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\importlib\__init__.py", line 88, in import_module
+
+    return _bootstrap._gcd_import(name[level:], package, level)
+
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "<frozen importlib._bootstrap>", line 1398, in _gcd_import
+
+  File "<frozen importlib._bootstrap>", line 1371, in _find_and_load
+
+  File "<frozen importlib._bootstrap>", line 1342, in _find_and_load_unlocked
+
+  File "<frozen importlib._bootstrap>", line 938, in _load_unlocked
+
+  File "<frozen importlib._bootstrap_external>", line 762, in exec_module
+
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\app\main.py", line 6, in <module>
+
+    models.Base.metadata.create_all(bind=engine)
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\sql\schema.py", line 5930, in create_all
+
+    bind._run_ddl_visitor(
+
+    ~~~~~~~~~~~~~~~~~~~~~^
+
+        ddl.SchemaGenerator, self, checkfirst=checkfirst, tables=tables
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3269, in _run_ddl_visitor
+
+    with self.begin() as conn:
+
+         ~~~~~~~~~~^^
+
+  File "C:\Users\kissb\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 141, in __enter__
+
+    return next(self.gen)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3259, in begin
+
+    with self.connect() as conn:
+
+         ~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3295, in connect
+
+    return self._connection_cls(self)
+
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 146, in __init__
+
+    Connection._handle_dbapi_exception_noconnection(
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+
+        err, dialect, engine
+
+        ^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2450, in _handle_dbapi_exception_noconnection      
+
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 144, in __init__
+
+    self._dbapi_connection = engine.raw_connection()
+
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3319, in raw_connection
+
+    return self.pool.connect()
+
+           ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+
+    return _ConnectionFairy._checkout(self)
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1272, in _checkout
+
+    fairy = _ConnectionRecord.checkout(pool)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
+
+    rec = pool._do_get()
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 178, in _do_get
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 176, in _do_get
+
+    return self._create_connection()
+
+           ~~~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
+
+    return _ConnectionRecord(self)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
+
+    self.__connect()
+
+    ~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 900, in __connect
+
+    with util.safe_reraise():
+
+         ~~~~~~~~~~~~~~~~~^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+
+    raise exc_value.with_traceback(exc_tb)
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 896, in __connect
+
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+
+                                         ~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\create.py", line 667, in connect
+
+    return dialect.connect(*cargs_tup, **cparams)
+
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 630, in connect
+
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+
+  File "C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system\venv\Lib\site-packages\psycopg2\__init__.py", line 135, in connect
+
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+
+sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"  
+
+
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+Ez a hibaüzenet egy nagyon fontos dolgot árul el, és ez egy klasszikus "fejlesztői gép" szindróma.
+
+Ha a volume törlése és az IP cím cseréje után is pontosan ugyanez a jelszóhiba jön elő, az 99%-ban egyetlen dolgot jelent: Fut egy natív (nem Dockerben lévő) PostgreSQL szerver a gépeden.
+
+Mivel szoftverfejlesztőnek tanulsz, szinte biztos, hogy valamelyik korábbi egyetemi adatbázisos beadandóhoz (vagy a LUMIN projektedhez) feltelepítettél egy PostgreSQL-t közvetlenül a Windowsra. Ez a helyi szerver lefoglalja az alapértelmezett 5432-es portot. Amikor a Pythonod megpróbál csatlakozni, a Docker helyett ehhez a régi, helyi szerverhez lyukad ki, aminek viszont teljesen más jelszót adtál meg anno, nem pedig azt, hogy postgres.
+
+Ezt a legkönnyebben úgy tudjuk kikerülni, ha a Docker konténerünket egyszerűen áttesszük egy másik portra. Így biztosan nem fognak összeakadni.
+
+A megoldás lépésről lépésre:
+1. Állítsd le a mostani konténert
+A terminálban futtasd le ezt:
+
+PowerShell
+docker compose down
+2. Írd át a portot a docker-compose.yml fájlban
+Nyisd meg a docker-compose.yml-t, és a ports résznél az első számot írd át 5433-ra. Így kell kinéznie a módosított sornak:
+
+YAML
+    ports:
+      - "5433:5432"
+(Ez azt jelenti, hogy a géped 5433-as portját rákötjük a konténer belső 5432-es portjára).
+
+3. Írd át a portot a Python kódban is
+Nyisd meg az app/database.py fájlt, és a connection stringben a portot szintén írd át 5433-ra:
+
+Python
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5433/parking_db"
+4. Indítsd újra a Dockert
+Futtasd le újra az indító parancsot a PowerShellben:
+
+PowerShell
+docker compose up -d
+5. Indítsd el a backendet
+Most próbálkozz újra az Uvicorn indításával:
+
+PowerShell
+uvicorn app.main:app --reload
+Ezzel a trükkel garantáltan megkerültük a Windowsos PostgreSQL-t, és a kódod most már egyenesen a tiszta Docker konténerhez fog csatlakozni. Ha lefutott, és megjelent az "Adatbázis sikeresen feltöltve alap adatokkal!" üzenet, akkor nyugodtan ráküldheted a korábban megbeszélt commitot!
+
+(venv) PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> docker compose down
+
+time="2026-08-03T13:52:39+02:00" level=warning msg="C:\\Users\\kissb\\Desktop\\Stuff\\Projects\\sonrisa\\parking_system\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+[+] down 2/2
+
+ ✔ Container parking_system-db-1  Removed                                                                                                                                   0.1s
+
+ ✔ Network parking_system_default Removed                                                                                                                                   0.4s
+
+(venv) PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> docker compose up -d
+
+time="2026-08-03T13:54:02+02:00" level=warning msg="C:\\Users\\kissb\\Desktop\\Stuff\\Projects\\sonrisa\\parking_system\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+[+] up 2/2
+
+ ✔ Network parking_system_default Created                                                                                                                                   0.1s
+
+ ✔ Container parking_system-db-1  Started                                                                                                                                   1.0s
+
+(venv) PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> uvicorn app.main:app --reload
+
+INFO:     Will watch for changes in these directories: ['C:\\Users\\kissb\\Desktop\\Stuff\\Projects\\sonrisa\\parking_system']
+
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+
+INFO:     Started reloader process [23840] using StatReload
+
+Adatbázis sikeresen feltöltve alap adatokkal!
+
+INFO:     Started server process [16844]
+
+INFO:     Waiting for application startup.
+
+INFO:     Application startup complete.
+
+INFO:     127.0.0.1:60155 - "GET / HTTP/1.1" 200 OK
+
+Zseniális, meg is vagyunk! Pontosan ez a hibaüzenet-olvasási és problémamegoldási készség az, amit egy interjún is keresnek. Azzal, hogy áttettük a Dockert az 5433-as portra, sikeresen elszigeteltük a projektet a gépeden futó többi folyamattól.
+
+Mivel ez a lépés most már hibátlanul lefutott, először is commitold a jelenlegi állapotot, ahogy korábban megbeszéltük. Lődd le a szervert (Ctrl+C), majd futtasd ezeket:
+
+PowerShell
+git add .
+git commit -m "Fix database connection port and implement DB initialization"
+Jöhet az első igazi API végpont!
+A feladatleírás szerint a rendszernek nyilván kell tartania a parkolóhelyeket. Ahhoz, hogy ezeket ki is tudjuk szolgálni a weben keresztül (és le tudjuk tesztelni, hogy tényleg bekerült-e az az 5 alap adat), készítünk egy végpontot.  
+PDF
+
+A FastAPI-ban ehhez be kell vezetnünk egy új fogalmat: a Pydantic sémákat.
+
+A models.py felel azért, hogy hogyan néz ki az adat az adatbázisban.
+
+A schemas.py (amit most fogunk megírni) felel azért, hogy hogyan nézzen ki az adat, amikor az API kiküldi vagy fogadja azt JSON formátumban. Ez biztosítja az adatvalidációt.
+
+1. A schemas.py létrehozása
+Hozz létre egy új fájlt az app mappában schemas.py néven, és másold bele ezt a kódot:
+
+Python
+from pydantic import BaseModel
+
+# Alap séma a parkolóhelyhez
+class ParkingSpotBase(BaseModel):
+    name: str
+    type: str
+
+# Ezt a sémát használjuk a válaszadásnál (tartalmazza az ID-t is)
+class ParkingSpotResponse(ParkingSpotBase):
+    id: int
+
+    class Config:
+        # Ez teszi lehetővé, hogy az SQLAlchemy modellből (ORM) közvetlenül Pydantic JSON-t csináljunk
+        from_attributes = True 
+2. A main.py frissítése a végponttal
+Most nyisd meg a main.py-t. Két dolgot kell hozzáadnunk: egy függvényt, ami biztonságosan megnyitja és lezárja az adatbázis-kapcsolatot minden API hívásnál (ezt hívják Dependency Injectionnek), és magát az új végpontot.
+
+Írd felül a main.py tetején lévő importokat, és add hozzá az új kódrészeket a health_check végpont alá:
+
+Python
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+from typing import List
+
+from .database import engine, SessionLocal
+from . import models, schemas
+
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title="Parkolóhely-foglalás API",
+    description="Backend szolgáltatás parkolóhelyek kezeléséhez és foglalásához.",
+    version="1.0.0"
+)
+
+def init_db():
+    db = SessionLocal()
+    try:
+        if db.query(models.ParkingSpot).count() == 0:
+            alap_helyek = [
+                models.ParkingSpot(name="P-01", type="normal"),
+                models.ParkingSpot(name="P-02", type="normal"),
+                models.ParkingSpot(name="P-03", type="normal"),
+                models.ParkingSpot(name="VIP-01", type="vip"),
+                models.ParkingSpot(name="DIS-01", type="disabled"),
+            ]
+            db.add_all(alap_helyek)
+            db.commit()
+            print("Adatbázis sikeresen feltöltve alap adatokkal!")
+    finally:
+        db.close()
+
+init_db()
+
+# Adatbázis session függőség
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "A Parkolóhely-foglalás API fut és az adatbázis inicializálva!"}
+
+# ÚJ VÉGPONT: Parkolóhelyek lekérdezése
+@app.get("/spots", response_model=List[schemas.ParkingSpotResponse])
+def get_parking_spots(db: Session = Depends(get_db)):
+    spots = db.query(models.ParkingSpot).all()
+    return spots
+3. Tesztelés a Swagger UI-on
+Ha bemásoltad, indítsd el újra a szervert:
+
+PowerShell
+uvicorn app.main:app --reload
+Nyisd meg a böngészőben a [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) oldalt. Látnod kell az új, GET /spots végpontot. Kattints a "Try it out", majd az "Execute" gombra! Ha mindent jól csináltunk, a válaszban (Response body) meg kell jelennie egy gyönyörű, formázott JSON listának a mi 5 db inicializált parkolóhelyünkkel.
+
+Működik a lekérdezés? Ha igen, commitoljuk ezt is, és rátérhetünk a rendszer legkódolósabb részére: a foglalások felvitelére és az időpont-ütközések vizsgálatára!  
+PDF
+
+Tökéletes! Az általad beküldött image_71c447.png és image_71c425.png képeken gyönyörűen látszik, hogy a végpont hibátlanul lefutott, és a Swagger UI pontosan azt a formázott JSON listát adja vissza a bázisadatokkal, amit vártunk.
+
+Mielőtt belevágunk a legkeményebb részbe, rögzítsük ezt a sikert a terminálban:
+
+PowerShell
+git add .
+git commit -m "Add GET /spots endpoint to list parking spots"
+Jöhet a rendszer lelke: A foglalás és az ütközésvizsgálat
+A feladatleírás kimondja, hogy a rendszernek fogadnia kell egy foglalási kérést, ami tartalmazza a parkolóhelyet, a kezdő- és záró időpontot, valamint a kérelmezőt. Ezen felül a rendszernek el kell döntenie, hogy elfogadható-e a kérés. Ez utóbbi (az időpont-ütközés vizsgálata) a feladat legkritikusabb logikai pontja, amit az interjúztatók nagyítóval fognak nézni.  
+PDF
++ 1
+
+1. Bővítsük a schemas.py-t
+Ahhoz, hogy a FastAPI tudja, milyen adatokat várjon a felhasználótól (és azokat automatikusan validálja is), létre kell hoznunk a foglalás sémáit. Nyisd meg a schemas.py-t, importáld be a datetime-ot a fájl legtetején, és add hozzá az új osztályokat az eddigiek alá:
+
+Python
+from pydantic import BaseModel
+from datetime import datetime
+
+# ... (az eddigi ParkingSpot sémák maradnak)
+
+# Ezt várjuk a felhasználótól (Bemenet)
+class BookingCreate(BaseModel):
+    parking_spot_id: int
+    applicant_name: str
+    start_time: datetime
+    end_time: datetime
+
+# Ezt adjuk vissza a sikeres mentés után (Kimenet)
+class BookingResponse(BookingCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
+2. Az ütközés (Overlap) logikája
+Mikor mondjuk azt, hogy egy új foglalás ütközik egy már létezővel?
+Két idősáv akkor fedi egymást, ha a már bent lévő foglalás kezdete korábban van, mint az új foglalás vége, ÉS a már bent lévő foglalás vége később van, mint az új foglalás kezdete.
+
+Ezt az SQL lekérdezést fogjuk beépíteni a végpontba.
+
+3. Bővítsük a main.py-t a POST végponttal
+Nyisd meg a main.py-t. A fájl tetején lévő importokhoz add hozzá a HTTPException-t (ezzel fogunk hibaüzenetet küldeni, ha foglalt a hely):
+
+Python
+from fastapi import FastAPI, Depends, HTTPException
+Majd másold be ezt az új végpontot a fájl legaljára, a get_parking_spots alá:
+
+Python
+# ÚJ VÉGPONT: Foglalás leadása
+@app.post("/bookings", response_model=schemas.BookingResponse)
+def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)):
+    
+    # 1. Alapvető validáció: a vége nem lehet a kezdete előtt
+    if booking.end_time <= booking.start_time:
+        raise HTTPException(status_code=400, detail="A záró időpontnak a kezdő időpont után kell lennie.")
+
+    # 2. Ellenőrizzük, hogy létezik-e egyáltalán a kért parkolóhely
+    spot = db.query(models.ParkingSpot).filter(models.ParkingSpot.id == booking.parking_spot_id).first()
+    if not spot:
+        raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
+
+    # 3. Ütközésvizsgálat (Overlap logic)
+    overlapping_booking = db.query(models.Booking).filter(
+        models.Booking.parking_spot_id == booking.parking_spot_id,
+        models.Booking.start_time < booking.end_time,
+        models.Booking.end_time > booking.start_time
+    ).first()
+
+    if overlapping_booking:
+        raise HTTPException(status_code=400, detail="A parkolóhely ebben az időszakban már foglalt.")
+
+    # 4. Ha minden rendben, elmentjük az új foglalást
+    new_booking = models.Booking(
+        parking_spot_id=booking.parking_spot_id,
+        applicant_name=booking.applicant_name,
+        start_time=booking.start_time,
+        end_time=booking.end_time
+    )
+    
+    db.add(new_booking)
+    db.commit()
+    db.refresh(new_booking) # Frissítjük az objektumot, hogy megkapja a generált ID-t
+    
+    return new_booking
+4. Irány tesztelni!
+Mentsd el a fájlokat, és a Swagger UI ([http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)) frissítése után látnod kell az új, zöld POST /bookings végpontot.
+
+Kattints a Try it out-ra, és adj le egy foglalást mondjuk az 1-es ID-jű parkolóhelyre, egy jövőbeli dátummal (pl. "2026-08-10T10:00:00"-tól "2026-08-10T12:00:00"-ig). Ha lefutott, próbáld meg leadni ugyanezt a foglalást még egyszer! Ha az általunk megírt logika jó, a második próbálkozásra egy piros, 400 Error: A parkolóhely ebben az időszakban már foglalt. hibaüzenetet kell kapnod.
+
+Sikerült összehozni az ütközést?
+
+INFO:     Started server process [5016]
+
+INFO:     Waiting for application startup.
+
+INFO:     Application startup complete.
+
+INFO:     127.0.0.1:49886 - "GET /docs HTTP/1.1" 200 OK
+
+INFO:     127.0.0.1:49886 - "GET /openapi.json HTTP/1.1" 200 OK
+
+INFO:     127.0.0.1:59725 - "POST /bookings HTTP/1.1" 200 OK
+
+INFO:     127.0.0.1:50260 - "POST /bookings HTTP/1.1" 400 Bad Request
+
+INFO:     Shutting down
+
+INFO:     Waiting for application shutdown.
+
+INFO:     Application shutdown complete.
+
+INFO:     Finished server process [5016]
+
+INFO:     Stopping reloader process [10328]
+
+(venv) PS C:\Users\kissb\Desktop\Stuff\Projects\sonrisa\parking_system> 
+
+
+
+igen minden jo volt elvileg
+
+Látod, a terminálod logja mindent elárul, és ez a legszebb visszajelzés egy fejlesztőnek!
+
+Az első kérésnél: POST /bookings HTTP/1.1" 200 OK (Sikeresen elmentette).
+A második, azonos kérésnél: POST /bookings HTTP/1.1" 400 Bad Request (Az ütközésvizsgálatunk tökéletesen működik, és megfogta a duplikációt!).
+
+Ezzel a feladat legkritikusabb és legnehezebb logikai részét hibátlanul abszolváltad. Először is kötelező jelleggel commitoljuk ezt a hatalmas mérföldkövet:
+
+PowerShell
+git add .
+git commit -m "Add booking creation endpoint with overlap validation"
+A célegyenes: Lekérdezés és Lemondás
+Ha megnézzük a specifikációt, már csak két kötelező funkció maradt hátra:
+
+Lekérdezhetővé tenni egy adott parkolóhely foglalásait.  
+PDF
+
+Lehetővé tenni egy foglalás lemondását.  
+PDF
+
+Ezekhez már nem kell új Pydantic sémákat írnunk, a meglévő BookingResponse tökéletesen elég lesz. Csak két új végpontot kell a main.py aljára, a create_booking függvény alá beillesztenünk.
+
+Nyisd meg a main.py-t, és másold be ezt a két végpontot a fájl legvégére:
+
+Python
+# ÚJ VÉGPONT: Egy adott parkolóhely foglalásainak lekérdezése
+@app.get("/spots/{spot_id}/bookings", response_model=List[schemas.BookingResponse])
+def get_bookings_for_spot(spot_id: int, db: Session = Depends(get_db)):
+    # 1. Ellenőrizzük, hogy létezik-e egyáltalán a kért parkolóhely
+    spot = db.query(models.ParkingSpot).filter(models.ParkingSpot.id == spot_id).first()
+    if not spot:
+        raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
+    
+    # 2. Lekérjük a helyhez tartozó összes foglalást
+    bookings = db.query(models.Booking).filter(models.Booking.parking_spot_id == spot_id).all()
+    return bookings
+
+
+# ÚJ VÉGPONT: Foglalás lemondása
+@app.delete("/bookings/{booking_id}")
+def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
+    # 1. Megkeressük a foglalást
+    booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="A foglalás nem található.")
+    
+    # 2. Töröljük az adatbázisból
+    db.delete(booking)
+    db.commit()
+    
+    return {"message": "A foglalás sikeresen törölve.", "deleted_booking_id": booking_id}
+Ezzel a kóddal a specifikációban kért összes kötelező backend és adatbázis logikát lefedtük.  
+PDF
+
+Készen állsz beilleszteni és a Swagger UI-ban letesztelni ezt a két utolsó, kötelező végpontot is?
+
+igen mehetunk tovabb
+
+Szuper! Ha bemásoltad a kódot, és a Swagger UI-ban sikeresen le tudtad kérdezni, majd törölni is a teszt foglalásodat, akkor megvagyunk a backend kódolásának oroszlánrészével!
+
+Mielőtt továbbmegyünk, rögzítsük ezt az állapotot is a verziókövetőben. Zárd be a szervert (Ctrl+C), és futtasd le a commitot:
+
+PowerShell
+git add .
+git commit -m "Add endpoints for getting and canceling bookings"
+Most jön az a technikai mérföldkő, ami elválasztja a kezdőket a profiktól, és amit a Sonrisa feladatleírása is szigorúan megkövetel: "a teljes rendszer (kóddal és adatbázissal együtt) egy paranccsal induljon (pl. docker-compose up)".  
+PDF
+
+Jelenleg a docker-compose parancsunkkal csak a PostgreSQL adatbázist indítjuk el, a Python (FastAPI) szervert pedig külön, kézzel futtatjuk a terminálból. Ezt a kettőt most össze kell "drótoznunk", hogy a kódunk is egy saját Docker konténerben fusson.
+
+Ehhez két fájlhoz kell hozzányúlnunk:
+
+Írnunk kell egy Dockerfile-t a projekt gyökerébe, ami leírja, hogyan épül fel a Python környezetünk a konténeren belül.
+
+Ki kell bővítenünk a meglévő docker-compose.yml fájlunkat, hogy ne csak a db szolgáltatást, hanem az új web (FastAPI) szolgáltatást is elindítsa.
+
+Mivel korábban említetted, hogy biztosra akarsz menni, küldjem azonnal a pontos Dockerfile tartalmát és a módosított docker-compose.yml kódot, hogy egyből be tudd illeszteni őket?
+
+igen kerlek
+
+Nagyszerű, csináljuk meg profin! Ahhoz, hogy ez tényleg hibátlanul működjön, egy nagyon pici, de annál fontosabb logikai lépést is meg kell tennünk.
+
+Amikor a FastAPI kódunk bekerül egy Docker konténerbe, az egy saját, zárt virtuális hálózatba kerül. Innentől kezdve a Python számára a 127.0.0.1 (localhost) saját magát (a webes konténert) fogja jelenteni, nem pedig az adatbázis konténert! Ezért meg kell tanítanunk a kódunknak, hogy ha Dockerben fut, akkor a db nevű géphez csatlakozzon.
+
+Kövesd ezt a 3 lépést:
+
+1. Készítsük fel a database.py-t a Dockerre
+Nyisd meg az app/database.py fájlt. Kicseréljük benne a fixen beégetett kapcsolatot egy dinamikusra, ami képes környezeti változót (Environment Variable) olvasni. Cseréld ki a teljes tartalmát erre:
+
+Python
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+# Ha a Docker átadja a DATABASE_URL-t, azt használja, ha nem, marad a lokális 5433-as teszteléshez
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "postgresql://postgres:postgres@127.0.0.1:5433/parking_db"
+)
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+2. A Dockerfile létrehozása
+Hozz létre egy új fájlt kiterjesztés nélkül, pontosan Dockerfile néven a projekted legkülső mappájában (ott, ahol a requirements.txt is van). Másold bele ezt:
+
+Dockerfile
+# Hivatalos, pehelysúlyú Python image-t használunk
+FROM python:3.11-slim
+
+# Munkakönyvtár beállítása a konténeren belül
+WORKDIR /code
+
+# Függőségek másolása és telepítése (így a Docker tudja cache-elni ezt a lépést)
+COPY ./requirements.txt /code/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+
+# A teljes app mappa bemásolása
+COPY ./app /code/app
+
+# A szerver indítási parancsa
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+3. A docker-compose.yml frissítése
+Most nyisd meg a már létező docker-compose.yml fájlt, és írd felül ezzel az új tartalommal. Ezzel teljesítjük a feladat elvárását, miszerint a teljes rendszer (adatbázis és kód) egyszerre, egy paranccsal induljon.  
+PDF
+
+Figyeld meg a web szolgáltatás alatti environment részt: itt mondjuk meg a Pythonnak, hogy a belső hálózaton a db nevű, 5432-es porton lévő géphez csatlakozzon!
+
+YAML
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: parking_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/parking_db
+    depends_on:
+      - db
+    restart: on-failure
+
+volumes:
+  postgres_data:
+4. A nagy teszt!
+Ments el minden fájlt! Mivel a database.py is megváltozott, és ezt eddig nem rögzítettük, előbb csinálj egy Git commitot:
+
+PowerShell
+git add .
+git commit -m "Dockerize application: Add Dockerfile, update DB config, and setup web service in docker-compose"
+Ha a commit megvan, állíts le mindent (ha még futna valamilyen szerver a terminálodban). Lődd le a korábbi Docker adatbázist is, hogy tiszta lappal induljunk:
+
+PowerShell
+docker compose down
+És most jöhet a varázslat. Add ki ezt az egyetlen parancsot:
+
+PowerShell
+docker compose up --build -d
+(A --build kapcsoló azért kell, hogy a Docker megépítse a Python konténerünket a friss Dockerfile alapján, a -d pedig továbbra is a háttérbe küldi a folyamatot.)
+
+Ha lefutott, nyisd meg böngészőben a [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) oldalt. Ha bejön a Swagger UI, és hiba nélkül le tudod kérdezni a GET /spots végpontot, akkor hivatalosan is összeraktál egy teljesen konténerizált Full-Stack (Backend + DB) alkalmazást!
+
+Jelezz vissza, kérlek, hogy sikerült-e az indítás!
+
+igen elvileg lefutott minden jol
+
+Óriási gratuláció! Ha ez az egyetlen parancs hibátlanul felhúzta az adatbázist és a webszervert is, és tudtál foglalni a böngészőből, akkor technológiai értelemben 100%-osan készen vagy a fejlesztéssel!
+
+A kódod tiszta, van benne hibakezelés, ütközésvizsgálat, és egyetlen paranccsal indítható a teljes infrastruktúra. Ez pontosan az a szint, amit egy junior/medior interjún látni akarnak.
+
+Viszont a feladat még nem ért véget. A fejlesztők (és a vizsgáztatók) nagyon szigorúak a dokumentációval kapcsolatban. A specifikáció alapján az alábbi elvárt mellékleteket kell még elkészítenünk az átadáshoz:  
+PDF
+
+1. A README.md (Rendszerterv, API-leírás, Felhasználói kézikönyv)
+A leírás kimondja, hogy ez a három dokumentum készülhet egy fájlban és tetszőleges mélységben. A legprofibb, ha ezt a projekt gyökerében lévő README.md fájlban egyesítjük, amit a GitHub automatikusan meg is jelenít majd.  
+PDF
+
+Rendszerterv: Röviden leírjuk a FastAPI + PostgreSQL + Docker architektúrát, és a két adatbázistáblát.
+
+API-leírás: Mivel a FastAPI automatikusan generálja a Swagger UI-t, ide elég leírni a végpontok listáját, és betenni a linket a /docs oldalra, megemlítve, hogy ott interaktívan tesztelhető az egész.
+
+Felhasználói kézikönyv: Pontos utasítás a docker compose up --build -d kiadására, és arra, hogyan lehet megnézni a parkolóhelyeket.
+
+2. A Döntési Napló és Reflexió (Külön fájl)
+Ez kötelező melléklet. A fejlesztés során tudatosan hoztunk olyan döntéseket, amikkel most simán fel tudjuk tölteni a minimum 3-4 kért sort:  
+PDF
++ 1
+
+Döntési pont: Adatbázis típus. Választás: PostgreSQL. Miért: A foglalási idősávok metszetének (overlap) vizsgálata SQL-ben stabil és gyors.
+
+Döntési pont: Parkolóhelyek státusza. Választás: Nincs is_free booleán mező. Miért: A szabad státusz folyamatosan változik az idő függvényében, így azt dinamikusan, az ütköző foglalások hiányából számoljuk ki.
+
+Döntési pont: Inicializálás módja. Választás: Az app indulásakor lefutó Python szkript. Miért: Így nem kell külön SQL szkripteket futtatnia a tesztelőnek, a rendszer önmagát tölti fel.
+
+Döntési pont: Docker port. Választás: 5433-as külső port az adatbázisnak. Miért: Hogy elkerüljük a konfliktust a gépen esetlegesen már futó helyi SQL szerverekkel.
+
+(A reflexió részbe pedig majd írsz 5-6 őszinte mondatot arról, hogy az adatbázis portütközés volt a legváratlanabb hiba, de sikeresen elhárítottad.)
+
+3. Az AI Prompt History
+Mivel javasolták az AI használatát, a végén ezt a beszélgetést egy az egyben exportáljuk és csatoljuk a repóhoz. Látni fogják belőle, hogy mérnöki módon, páros programozásra és tervezésre használtad az eszközt, nem pedig vakon kódgenerálásra.  
+PDF
+
+Készen állsz a papírmunkára? Melyikkel kezdjük: összerakjuk a végleges README.md szövegét, vagy megírjuk a Döntési Naplót egy külön fájlban?
+
