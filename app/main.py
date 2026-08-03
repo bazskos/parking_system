@@ -1,7 +1,6 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-
 from .database import engine, SessionLocal
 from . import models, schemas
 
@@ -48,3 +47,39 @@ def health_check():
 def get_parking_spots(db: Session = Depends(get_db)):
     spots = db.query(models.ParkingSpot).all()
     return spots
+
+@app.post("/bookings", response_model=schemas.BookingResponse)
+def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)):
+    
+    # 1. Alapvető validáció: a vége nem lehet a kezdete előtt
+    if booking.end_time <= booking.start_time:
+        raise HTTPException(status_code=400, detail="A záró időpontnak a kezdő időpont után kell lennie.")
+
+    # 2. Ellenőrizzük, hogy létezik-e a kért parkolóhely
+    spot = db.query(models.ParkingSpot).filter(models.ParkingSpot.id == booking.parking_spot_id).first()
+    if not spot:
+        raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
+
+    # 3. Ütközésvizsgálat (Overlap logic)
+    overlapping_booking = db.query(models.Booking).filter(
+        models.Booking.parking_spot_id == booking.parking_spot_id,
+        models.Booking.start_time < booking.end_time,
+        models.Booking.end_time > booking.start_time
+    ).first()
+
+    if overlapping_booking:
+        raise HTTPException(status_code=400, detail="A parkolóhely ebben az időszakban már foglalt.")
+
+    # 4. Ha minden rendben, elmentjük az új foglalást
+    new_booking = models.Booking(
+        parking_spot_id=booking.parking_spot_id,
+        applicant_name=booking.applicant_name,
+        start_time=booking.start_time,
+        end_time=booking.end_time
+    )
+    
+    db.add(new_booking)
+    db.commit()
+    db.refresh(new_booking)
+    
+    return new_booking
