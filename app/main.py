@@ -1,8 +1,10 @@
-from fastapi import FastAPI
-from .database import engine, SessionLocal
-from . import models
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+from typing import List
 
-# 1. Létrehozzuk a táblákat az adatbázisban a models.py alapján
+from .database import engine, SessionLocal
+from . import models, schemas
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -12,12 +14,9 @@ app = FastAPI(
 )
 
 def init_db():
-    # Nyitunk egy adatbázis munkamenetet (session)
     db = SessionLocal()
     try:
-        # 2. Megnézzük, van-e már adat a ParkingSpot táblában
         if db.query(models.ParkingSpot).count() == 0:
-            # Ha nincs, létrehozunk 5 alapértelmezett parkolóhelyet
             alap_helyek = [
                 models.ParkingSpot(name="P-01", type="normal"),
                 models.ParkingSpot(name="P-02", type="normal"),
@@ -31,9 +30,21 @@ def init_db():
     finally:
         db.close()
 
-# 3. Meghívjuk az inicializáló függvényt az app indulásakor 
 init_db()
+
+# Adatbázis session függőség
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.get("/")
 def health_check():
     return {"status": "ok", "message": "A Parkolóhely-foglalás API fut és az adatbázis inicializálva!"}
+
+@app.get("/spots", response_model=List[schemas.ParkingSpotResponse])
+def get_parking_spots(db: Session = Depends(get_db)):
+    spots = db.query(models.ParkingSpot).all()
+    return spots
