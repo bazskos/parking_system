@@ -60,7 +60,7 @@ def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)
     if not spot:
         raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
 
-    # 3. Ütközésvizsgálat (Overlap logic)
+    # 3. Overlap logic
     overlapping_booking = db.query(models.Booking).filter(
         models.Booking.parking_spot_id == booking.parking_spot_id,
         models.Booking.start_time < booking.end_time,
