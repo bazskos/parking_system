@@ -1,16 +1,9 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from .database import engine, SessionLocal
 from . import models, schemas
-
-models.Base.metadata.create_all(bind=engine)
-
-app = FastAPI(
-    title="Parkolóhely-foglalás API",
-    description="Backend szolgáltatás parkolóhelyek kezeléséhez és foglalásához.",
-    version="1.0.0"
-)
 
 def init_db():
     db = SessionLocal()
@@ -29,9 +22,20 @@ def init_db():
     finally:
         db.close()
 
-init_db()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    models.Base.metadata.create_all(bind=engine)
+    init_db()
+    
+    yield
 
-# Adatbázis session függőség
+app = FastAPI(
+    title="Parkolóhely-foglalás API",
+    description="Backend szolgáltatás parkolóhelyek kezeléséhez és foglalásához.",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
 def get_db():
     db = SessionLocal()
     try:
@@ -61,7 +65,6 @@ def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)
     if not spot:
         raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
 
-    # Jogosultság ellenőrzése ---
     if spot.type == "vip" and not booking.has_vip_pass:
         raise HTTPException(status_code=403, detail="Ez egy VIP parkolóhely, nincs hozzá jogosultságod.")
     
@@ -98,12 +101,9 @@ def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)
 # Egy adott parkolóhely foglalásainak lekérdezése
 @app.get("/spots/{spot_id}/bookings", response_model=List[schemas.BookingResponse])
 def get_bookings_for_spot(spot_id: int, db: Session = Depends(get_db)):
-    # 1. Ellenőrizzük, hogy létezik-e egyáltalán a kért parkolóhely
     spot = db.query(models.ParkingSpot).filter(models.ParkingSpot.id == spot_id).first()
     if not spot:
         raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
-    
-    # 2. Lekérjük a helyhez tartozó összes foglalást
     bookings = db.query(models.Booking).filter(models.Booking.parking_spot_id == spot_id).all()
     return bookings
 
@@ -111,12 +111,9 @@ def get_bookings_for_spot(spot_id: int, db: Session = Depends(get_db)):
 # Foglalás lemondása
 @app.delete("/bookings/{booking_id}")
 def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
-    # 1. Megkeressük a foglalást
     booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
     if not booking:
         raise HTTPException(status_code=404, detail="A foglalás nem található.")
-    
-    # 2. Töröljük az adatbázisból
     db.delete(booking)
     db.commit()
     

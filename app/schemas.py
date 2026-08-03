@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 class ParkingSpotBase(BaseModel):
@@ -7,9 +7,8 @@ class ParkingSpotBase(BaseModel):
 
 class ParkingSpotResponse(ParkingSpotBase):
     id: int
-
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class BookingCreate(BaseModel):
     parking_spot_id: int
@@ -21,6 +20,5 @@ class BookingCreate(BaseModel):
 
 class BookingResponse(BookingCreate):
     id: int
-
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
