@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from .database import Base
 
@@ -17,4 +17,6 @@ class Booking(Base):
     applicant_name = Column(String, index=True)
     start_time = Column(DateTime)
     end_time = Column(DateTime)
+    has_vip_pass = Column(Boolean, default=False)
+    has_disabled_badge = Column(Boolean, default=False)
     spot = relationship("ParkingSpot", back_populates="bookings")

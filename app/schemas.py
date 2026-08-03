@@ -16,6 +16,8 @@ class BookingCreate(BaseModel):
     applicant_name: str
     start_time: datetime
     end_time: datetime
+    has_vip_pass: bool = False
+    has_disabled_badge: bool = False
 
 class BookingResponse(BookingCreate):
     id: int

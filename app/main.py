@@ -48,6 +48,7 @@ def get_parking_spots(db: Session = Depends(get_db)):
     spots = db.query(models.ParkingSpot).all()
     return spots
 
+# Foglalás leadása
 @app.post("/bookings", response_model=schemas.BookingResponse)
 def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)):
     
@@ -55,10 +56,17 @@ def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)
     if booking.end_time <= booking.start_time:
         raise HTTPException(status_code=400, detail="A záró időpontnak a kezdő időpont után kell lennie.")
 
-    # 2. Ellenőrizzük, hogy létezik-e a kért parkolóhely
+    # 2. Ellenőrizzük, hogy létezik-e egyáltalán a kért parkolóhely
     spot = db.query(models.ParkingSpot).filter(models.ParkingSpot.id == booking.parking_spot_id).first()
     if not spot:
         raise HTTPException(status_code=404, detail="A megadott parkolóhely nem létezik.")
+
+    # Jogosultság ellenőrzése ---
+    if spot.type == "vip" and not booking.has_vip_pass:
+        raise HTTPException(status_code=403, detail="Ez egy VIP parkolóhely, nincs hozzá jogosultságod.")
+    
+    if spot.type == "disabled" and not booking.has_disabled_badge:
+        raise HTTPException(status_code=403, detail="Ez a parkolóhely mozgáskorlátozottak számára van fenntartva.")
 
     # 3. Overlap logic
     overlapping_booking = db.query(models.Booking).filter(
@@ -75,7 +83,9 @@ def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)
         parking_spot_id=booking.parking_spot_id,
         applicant_name=booking.applicant_name,
         start_time=booking.start_time,
-        end_time=booking.end_time
+        end_time=booking.end_time,
+        has_vip_pass=booking.has_vip_pass,
+        has_disabled_badge=booking.has_disabled_badge
     )
     
     db.add(new_booking)
